@@ -313,6 +313,7 @@
         <div class="user-info">
             <span id="currentUserName"></span>
             <div class="avatar" id="userAvatar"></div>
+            <button id="logoutBtn" style="background: transparent; border: 1px solid #2ea6ff; color: #2ea6ff; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; margin-left: 15px;">Выйти</button>
         </div>
     </div>
 
@@ -351,31 +352,120 @@
     const registerBtn = document.getElementById('registerBtn');
     const contactsList = document.getElementById('contactsList');
 
+    // Проверка сохранённого пользователя при загрузке
+    window.addEventListener('DOMContentLoaded', () => {
+        const savedUser = localStorage.getItem('currentUser');
+        if (savedUser) {
+            try {
+                currentUser = JSON.parse(savedUser);
+                if (currentUser.username && currentUser.userId) {
+                    // Автоматический вход
+                    authContainer.classList.add('hidden');
+                    appContainer.classList.remove('hidden');
+                    document.getElementById('currentUserName').textContent = currentUser.username;
+                    document.getElementById('userAvatar').textContent = currentUser.username[0].toUpperCase();
+                    
+                    // Подключение к WebSocket
+                    socket = io();
+                    socket.on('connect', () => {
+                        socket.emit('register', { username: currentUser.username, userId: currentUser.userId });
+                    });
+                    setupSocketListeners();
+                }
+            } catch (e) {
+                localStorage.removeItem('currentUser');
+            }
+        }
+    });
+
+    // Регистрация по Enter
+    document.getElementById('regUsername').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') registerBtn.click();
+    });
+    
+    document.getElementById('regUserId').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') registerBtn.click();
+    });
+
     // Регистрация
+    let isRegistering = false;
+    
     registerBtn.addEventListener('click', async () => {
+        // Защита от двойного клика
+        if (isRegistering) return;
+        
         const username = document.getElementById('regUsername').value.trim();
         const userId = document.getElementById('regUserId').value.trim();
         
+        // Валидация полей
         if (!username || !userId) {
             alert('Заполните все поля');
             return;
         }
         
-        currentUser = { username, userId };
+        if (username.length < 2) {
+            alert('Имя должно содержать минимум 2 символа');
+            return;
+        }
         
-        // Регистрация на сервере
-        const response = await fetch('/api/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, userId })
-        });
+        if (username.length > 30) {
+            alert('Имя не должно превышать 30 символов');
+            return;
+        }
         
-        if (response.ok) {
+        if (userId.length < 2) {
+            alert('ID должен содержать минимум 2 символа');
+            return;
+        }
+        
+        if (userId.length > 20) {
+            alert('ID не должен превышать 20 символов');
+            return;
+        }
+        
+        if (!/^[a-zA-Z0-9_]+$/.test(userId)) {
+            alert('ID может содержать только латинские буквы, цифры и подчёркивание');
+            return;
+        }
+        
+        // Блокируем кнопку и показываем индикатор
+        isRegistering = true;
+        registerBtn.disabled = true;
+        const originalText = registerBtn.textContent;
+        registerBtn.textContent = 'Регистрация...';
+        registerBtn.style.opacity = '0.6';
+        
+        try {
+            currentUser = { username, userId };
+            
+            // Регистрация на сервере
+            const response = await fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, userId })
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Ошибка регистрации');
+            }
+            
+            // Сохраняем пользователя
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            
             // Подключение к WebSocket
             socket = io();
             
             socket.on('connect', () => {
                 socket.emit('register', { username, userId });
+            });
+            
+            socket.on('connect_error', () => {
+                alert('Ошибка подключения к серверу. Проверьте соединение.');
+                isRegistering = false;
+                registerBtn.disabled = false;
+                registerBtn.textContent = originalText;
+                registerBtn.style.opacity = '1';
             });
             
             setupSocketListeners();
@@ -384,6 +474,50 @@
             appContainer.classList.remove('hidden');
             document.getElementById('currentUserName').textContent = username;
             document.getElementById('userAvatar').textContent = username[0].toUpperCase();
+            
+        } catch (error) {
+            console.error('Ошибка регистрации:', error);
+            alert(error.message || 'Ошибка при регистрации. Попробуйте другой ID.');
+            isRegistering = false;
+            registerBtn.disabled = false;
+            registerBtn.textContent = originalText;
+            registerBtn.style.opacity = '1';
+        }
+    });
+
+    // Обработчик выхода
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+        if (confirm('Вы уверены, что хотите выйти?')) {
+            // Отключаем сокет
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+            }
+            
+            // Останавливаем звонок если активен
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+            }
+            
+            if (peerConnection) {
+                peerConnection.close();
+                peerConnection = null;
+            }
+            
+            // Очищаем данные
+            localStorage.removeItem('currentUser');
+            currentUser = null;
+            currentCall = null;
+            pendingCall = null;
+            
+            // Очищаем поля ввода
+            document.getElementById('regUsername').value = '';
+            document.getElementById('regUserId').value = '';
+            
+            // Показываем форму регистрации
+            appContainer.classList.add('hidden');
+            authContainer.classList.remove('hidden');
         }
     });
 
