@@ -1,586 +1,801 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-  <title>Secure Call · Glass</title>
-  <!-- Font Awesome Icons (CDN) -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, sans-serif;
-      background: #0b0a0c;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 16px;
-      position: relative;
-      overflow-x: hidden;
-    }
-
-    /* Animated deep gradient background (subtle) */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background: radial-gradient(circle at 30% 40%, rgba(168, 85, 247, 0.18) 0%, transparent 40%),
-                  radial-gradient(circle at 80% 70%, rgba(236, 72, 153, 0.18) 0%, transparent 45%),
-                  #0b0a0c;
-      z-index: -2;
-      animation: breathe 12s ease-in-out infinite alternate;
-    }
-
-    /* extra floating soft glow */
-    body::after {
-      content: '';
-      position: fixed;
-      top: 20%;
-      left: 10%;
-      width: 60vw;
-      height: 60vw;
-      background: radial-gradient(circle, rgba(168,85,247,0.08) 0%, transparent 70%);
-      filter: blur(80px);
-      z-index: -1;
-      animation: drift 18s infinite alternate ease-in-out;
-    }
-
-    @keyframes breathe {
-      0% { opacity: 0.8; }
-      100% { opacity: 1; }
-    }
-
-    @keyframes drift {
-      0% { transform: translate(0, 0) scale(1); }
-      100% { transform: translate(5%, 5%) scale(1.2); }
-    }
-
-    .app-container {
-      max-width: 1280px;
-      width: 100%;
-      height: 90vh;
-      max-height: 900px;
-      display: flex;
-      flex-direction: column;
-      backdrop-filter: blur(2px);
-    }
-
-    /* ----- TOP SECTION (glass) ----- */
-    .call-header {
-      padding: 18px 24px 12px 24px;
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      background: rgba(20, 15, 25, 0.35);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border-radius: 48px 48px 28px 28px;
-      margin-bottom: 16px;
-      border: 0.5px solid rgba(168, 85, 247, 0.2);
-      box-shadow: 0 15px 35px -10px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(236, 72, 153, 0.1) inset;
-    }
-
-    .title-group {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .title-main {
-      font-size: 1.9rem;
-      font-weight: 600;
-      letter-spacing: -0.02em;
-      background: linear-gradient(135deg, #c084fc 0%, #f472b6 80%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-      text-shadow: 0 0 18px rgba(168, 85, 247, 0.5);
-    }
-
-    .title-sub {
-      font-size: 0.9rem;
-      font-weight: 400;
-      color: rgba(220, 210, 240, 0.8);
-      letter-spacing: 0.3px;
-      margin-top: 4px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .title-sub i {
-      font-size: 10px;
-      color: #a855f7;
-      text-shadow: 0 0 10px #a855f7;
-    }
-
-    .encryption-badge {
-      background: rgba(30, 20, 40, 0.5);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      padding: 8px 16px;
-      border-radius: 40px;
-      border: 0.5px solid rgba(236, 72, 153, 0.25);
-      box-shadow: 0 8px 20px -8px #00000066;
-    }
-
-    .encryption-badge span {
-      font-size: 0.85rem;
-      font-weight: 500;
-      color: #e2d5f5;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .encryption-badge i {
-      color: #a855f7;
-      filter: drop-shadow(0 0 8px #c084fc);
-    }
-
-    /* ----- CENTER VIDEO AREA (glass + glow) ----- */
-    .video-stage {
-      flex: 1;
-      position: relative;
-      border-radius: 40px;
-      overflow: hidden;
-      margin-bottom: 20px;
-      background: #0d0912;
-      box-shadow: 0 25px 40px -12px #000000cc, 0 0 0 1px rgba(168, 85, 247, 0.25), 0 0 40px rgba(168, 85, 247, 0.15);
-      transition: box-shadow 0.3s;
-      backdrop-filter: blur(2px);
-    }
-
-    .video-stage:hover {
-      box-shadow: 0 30px 50px -12px #000000, 0 0 0 1.5px rgba(236, 72, 153, 0.4), 0 0 60px rgba(236, 72, 153, 0.2);
-    }
-
-    #remoteVideo {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      background: #0b0710;
-      display: block;
-      border-radius: 40px;
-    }
-
-    /* local video PIP — glassmorphism card */
-    .local-video-wrapper {
-      position: absolute;
-      bottom: 22px;
-      right: 22px;
-      width: 170px;
-      max-width: 28%;
-      aspect-ratio: 4 / 3;
-      border-radius: 24px;
-      overflow: hidden;
-      background: rgba(20, 12, 30, 0.4);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1.2px solid rgba(236, 72, 153, 0.35);
-      box-shadow: 0 18px 30px -8px #000000b3, 0 0 0 0.5px rgba(168,85,247,0.4), 0 0 20px #a855f740;
-      transition: all 0.25s cubic-bezier(0.2, 0.9, 0.4, 1);
-      transform: scale(1);
-    }
-
-    .local-video-wrapper:hover {
-      transform: scale(1.02);
-      border-color: #c084fc;
-      box-shadow: 0 22px 35px -8px #000, 0 0 0 1.5px #ec4899, 0 0 30px #ec489950;
-    }
-
-    #localVideo {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-      border-radius: 24px;
-    }
-
-    /* small mic/cam status indicators (kept minimal) — no JS change, just style */
-    .pip-label {
-      position: absolute;
-      top: 10px;
-      left: 12px;
-      background: rgba(10, 5, 18, 0.6);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      padding: 4px 10px;
-      border-radius: 40px;
-      font-size: 0.7rem;
-      font-weight: 500;
-      color: #f0e6ff;
-      border: 0.3px solid rgba(236, 72, 153, 0.3);
-      pointer-events: none;
-    }
-
-    /* ----- BOTTOM CONTROLS (glass panel) ----- */
-    .controls-panel {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 22px;
-      padding: 16px 28px;
-      background: rgba(20, 13, 28, 0.45);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-radius: 60px;
-      border: 0.5px solid rgba(168, 85, 247, 0.35);
-      box-shadow: 0 20px 40px -8px #000000, 0 0 0 1px rgba(236, 72, 153, 0.15) inset;
-      margin-top: 4px;
-      transition: box-shadow 0.2s;
-    }
-
-    .ctrl-btn {
-      width: 68px;
-      height: 68px;
-      border-radius: 40px;
-      background: rgba(20, 12, 28, 0.7);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border: none;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 28px;
-      color: #f0e2ff;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      box-shadow: 0 8px 18px -6px #00000099, 0 0 0 1px rgba(168,85,247,0.3), 0 0 10px #a855f720;
-      border: 0.8px solid rgba(236, 72, 153, 0.25);
-    }
-
-    .ctrl-btn i {
-      filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.2));
-      transition: transform 0.15s;
-    }
-
-    .ctrl-btn:hover {
-      transform: scale(1.08);
-      box-shadow: 0 12px 24px -8px black, 0 0 0 2px #a855f7, 0 0 30px #ec4899;
-      border-color: #ec4899;
-      background: rgba(40, 20, 55, 0.8);
-    }
-
-    .ctrl-btn:hover i {
-      transform: scale(1.05);
-    }
-
-    /* gradient variants for call / end */
-    .call-start {
-      background: linear-gradient(145deg, #1f8a4b, #0f6e3a);
-      box-shadow: 0 8px 22px -6px #0a331a, 0 0 0 1.5px #4ade80, 0 0 25px #22c55e;
-      color: white;
-      border: none;
-    }
-
-    .call-start:hover {
-      background: linear-gradient(145deg, #22a85a, #158747);
-      box-shadow: 0 12px 28px -6px #0f3d22, 0 0 0 3px #86efac, 0 0 40px #4ade80;
-    }
-
-    .call-end {
-      background: linear-gradient(145deg, #c72a2a, #a11b1b);
-      box-shadow: 0 8px 22px -6px #3d0f0f, 0 0 0 1.5px #f87171, 0 0 25px #ef4444;
-      color: white;
-      border: none;
-    }
-
-    .call-end:hover {
-      background: linear-gradient(145deg, #e03a3a, #b91c1c);
-      box-shadow: 0 12px 28px -6px #4a1515, 0 0 0 3px #fca5a5, 0 0 40px #ef4444;
-    }
-
-    /* disabled state — still functional */
-    .ctrl-btn.muted {
-      background: rgba(60, 40, 70, 0.8);
-      color: #bbb;
-      box-shadow: 0 5px 12px -6px black, 0 0 0 1px #6b21a8;
-    }
-
-    .ctrl-btn.muted i {
-      color: #b09ac7;
-    }
-
-    /* responsive tweaks */
-    @media (max-width: 600px) {
-      body { padding: 8px; }
-      .app-container { height: 95vh; }
-      .call-header { padding: 12px 16px; border-radius: 30px; }
-      .title-main { font-size: 1.5rem; }
-      .controls-panel { gap: 12px; padding: 14px 18px; }
-      .ctrl-btn { width: 58px; height: 58px; font-size: 24px; }
-      .local-video-wrapper { width: 130px; bottom: 14px; right: 14px; }
-    }
-
-    @media (max-width: 400px) {
-      .ctrl-btn { width: 52px; height: 52px; }
-    }
-
-    /* extra micro-interaction: pulse glow on remote video container (subtle) */
-    .video-stage::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      border-radius: 40px;
-      pointer-events: none;
-      box-shadow: inset 0 0 40px rgba(168, 85, 247, 0.1);
-    }
-
-    /* keep original IDs & classes intact — NO logic changes */
-    .status-led {
-      display: inline-block;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #10b981;
-      box-shadow: 0 0 12px #10b981;
-      margin-right: 6px;
-    }
-
-    /* tiny animation for encrypted badge */
-    .pulse-dot {
-      animation: softPulse 2.5s infinite;
-    }
-
-    @keyframes softPulse {
-      0%, 100% { opacity: 0.9; box-shadow: 0 0 6px #a855f7; }
-      50% { opacity: 1; box-shadow: 0 0 16px #ec4899; }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Звонок · Crane</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0a0a0a;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-image:
+                radial-gradient(circle at 20% 30%, rgba(255, 0, 127, 0.08), transparent 45%),
+                radial-gradient(circle at 80% 70%, rgba(157, 0, 255, 0.08), transparent 45%);
+            padding: 16px;
+        }
+        @keyframes fade { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 20px 60px rgba(255, 0, 127, 0.2), 0 0 80px rgba(157, 0, 255, 0.15); }
+            50% { box-shadow: 0 20px 80px rgba(255, 0, 127, 0.35), 0 0 120px rgba(157, 0, 255, 0.25); }
+        }
+        .call-wrapper {
+            width: 100%; height: 100%; max-width: 1400px; max-height: 900px;
+            background: rgba(12, 12, 16, 0.7); backdrop-filter: blur(20px);
+            border-radius: 32px; display: flex; flex-direction: column;
+            animation: fade 0.5s ease-out; border: 1px solid rgba(255, 0, 127, 0.1);
+            box-shadow: 0 30px 50px -10px rgba(0, 0, 0, 0.5); overflow: hidden;
+        }
+        .call-top-bar {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 24px; border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            flex-shrink: 0;
+        }
+        .call-info { display: flex; align-items: center; gap: 16px; }
+        .call-icon {
+            width: 40px; height: 40px; border-radius: 12px;
+            background: linear-gradient(135deg, rgba(255, 0, 127, 0.15), rgba(157, 0, 255, 0.15));
+            display: flex; align-items: center; justify-content: center;
+            color: #d0b5ff; font-size: 20px;
+        }
+        .call-details h3 { font-size: 16px; font-weight: 600; color: #e0c0ff; }
+        .call-details p { font-size: 13px; color: #8b6ea3; margin-top: 2px; }
+        .call-timer {
+            font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums;
+            color: #c2acf0; background: rgba(20, 18, 30, 0.5);
+            padding: 8px 16px; border-radius: 20px; backdrop-filter: blur(10px);
+        }
+        .call-actions { display: flex; gap: 8px; }
+        .action-btn {
+            width: 40px; height: 40px; border-radius: 12px;
+            background: rgba(20, 18, 30, 0.5); border: none; color: #c2acf0;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            font-size: 18px; transition: all 0.2s; backdrop-filter: blur(10px);
+        }
+        .action-btn:hover { background: rgba(157, 0, 255, 0.2); color: #fff; }
+        .call-main { flex: 1; display: flex; padding: 16px; gap: 16px; min-height: 0; }
+        .video-grid {
+            flex: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 12px; align-content: center; justify-content: center;
+        }
+        .video-tile {
+            position: relative; background: #0f0f14; border-radius: 20px;
+            overflow: hidden; aspect-ratio: 16 / 9;
+            border: 1px solid rgba(255, 0, 127, 0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        .video-tile video { 
+            width: 100%; height: 100%; object-fit: cover; 
+            background: #1a1a2e;
+        }
+        .video-label {
+            position: absolute; bottom: 12px; left: 12px;
+            background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(10px);
+            padding: 6px 12px; border-radius: 20px; font-size: 13px;
+            color: #e0c0ff; border: 0.5px solid rgba(255, 0, 127, 0.2);
+        }
+        .side-panel {
+            width: 280px; background: rgba(10, 10, 14, 0.5); backdrop-filter: blur(15px);
+            border-radius: 20px; display: flex; flex-direction: column;
+            border: 1px solid rgba(255, 0, 127, 0.08); flex-shrink: 0;
+        }
+        .panel-tabs {
+            display: flex; padding: 12px; gap: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+        .tab {
+            flex: 1; padding: 10px; background: transparent; border: none;
+            color: #8b6ea3; cursor: pointer; border-radius: 12px;
+            font-size: 13px; font-weight: 500; transition: all 0.2s;
+        }
+        .tab.active { background: rgba(255, 0, 127, 0.15); color: #e0c0ff; }
+        .tab:hover { background: rgba(157, 0, 255, 0.1); }
+        .panel-content { flex: 1; overflow-y: auto; padding: 12px; }
+        .participant-item {
+            display: flex; align-items: center; gap: 12px; padding: 10px;
+            border-radius: 12px; cursor: pointer; transition: background 0.2s;
+        }
+        .participant-item:hover { background: rgba(255, 0, 127, 0.08); }
+        .participant-icon {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: linear-gradient(135deg, #FF007F, #9D00FF);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; color: white;
+        }
+        .participant-info { flex: 1; }
+        .participant-name { font-size: 14px; font-weight: 500; }
+        .participant-status { font-size: 11px; color: #9D00FF; }
+        .chat-message { padding: 8px 0; }
+        .chat-author { font-size: 13px; font-weight: 600; color: #d0b5ff; }
+        .chat-text { font-size: 13px; color: #b0a0c8; margin-top: 2px; }
+        .chat-input-container {
+            padding: 12px; border-top: 1px solid rgba(255, 255, 255, 0.04);
+            display: flex; gap: 8px;
+        }
+        .chat-input {
+            flex: 1; padding: 10px 14px; background: rgba(20, 18, 30, 0.5);
+            border: 0.5px solid rgba(255, 0, 127, 0.15); border-radius: 20px;
+            color: white; font-size: 13px; outline: none;
+        }
+        .chat-input:focus { border-color: #9D00FF; }
+        .chat-send {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: linear-gradient(135deg, #FF007F, #9D00FF);
+            border: none; color: white; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
+        }
+        .call-controls {
+            display: flex; align-items: center; justify-content: center; gap: 12px;
+            padding: 16px 24px; border-top: 1px solid rgba(255, 255, 255, 0.04);
+            flex-shrink: 0; background: rgba(10, 10, 14, 0.3);
+        }
+        .control-group { display: flex; gap: 8px; padding: 0 16px; }
+        .control-group:first-child { border-right: 1px solid rgba(255, 255, 255, 0.06); }
+        .ctrl-btn {
+            width: 48px; height: 48px; border-radius: 16px;
+            background: rgba(20, 18, 30, 0.6); backdrop-filter: blur(10px);
+            border: 0.5px solid rgba(255, 255, 255, 0.04); color: #e0c0ff;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            font-size: 20px; transition: all 0.2s;
+        }
+        .ctrl-btn:hover { background: rgba(157, 0, 255, 0.2); color: white; transform: scale(1.02); }
+        .ctrl-btn.active { background: rgba(255, 0, 127, 0.3); color: white; }
+        .ctrl-btn.danger { background: #c42e6a; color: white; }
+        .ctrl-btn.danger:hover { background: #dc2626; }
+        .ctrl-btn.large { width: 60px; height: 60px; border-radius: 20px; font-size: 24px; }
+        .hidden { display: none !important; }
+        
+        /* Уведомление об ошибке API */
+        .api-error-toast {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(220, 38, 38, 0.9);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 16px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 10000;
+            animation: slideIn 0.3s ease;
+            border-left: 4px solid #ff6b6b;
+        }
+        .api-error-toast i {
+            font-size: 20px;
+        }
+        .api-error-toast .close-toast {
+            margin-left: 12px;
+            cursor: pointer;
+            opacity: 0.7;
+        }
+        .api-error-toast .close-toast:hover {
+            opacity: 1;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    </style>
 </head>
 <body>
-<div class="app-container">
-  <!-- TOP: Glass header with gradient text -->
-  <header class="call-header">
-    <div class="title-group">
-      <div class="title-main">Secure Call</div>
-      <div class="title-sub">
-        <i class="fas fa-shield-alt"></i>
-        <span>End-to-end encrypted · peer connection</span>
-      </div>
+<div class="call-wrapper">
+    <div class="call-top-bar">
+        <div class="call-info">
+            <div class="call-icon"><i class="fas fa-phone-alt"></i></div>
+            <div class="call-details">
+                <h3 id="callTitle">Комната</h3>
+                <p id="callStatus">Подключение...</p>
+            </div>
+        </div>
+        <div class="call-timer" id="callTimer">00:00</div>
+        <div class="call-actions">
+            <button class="action-btn" id="fullscreenBtn" title="На весь экран"><i class="fas fa-expand"></i></button>
+        </div>
     </div>
-    <div class="encryption-badge">
-      <span>
-        <i class="fas fa-lock pulse-dot"></i> 
-        <span style="display: flex; gap: 6px;">
-          <span class="status-led"></span> Live · SRTP
-        </span>
-      </span>
+    <div class="call-main">
+        <div class="video-grid" id="videoGrid">
+            <div class="video-tile" id="localVideoTile">
+                <video id="localVideo" autoplay playsinline muted></video>
+                <div class="video-label">Вы</div>
+            </div>
+        </div>
+        <div class="side-panel">
+            <div class="panel-tabs">
+                <button class="tab active" data-tab="participants"><i class="fas fa-users"></i> Участники</button>
+                <button class="tab" data-tab="chat"><i class="fas fa-comment"></i> Чат</button>
+            </div>
+            <div class="panel-content" id="panelContent">
+                <div id="participantsList">
+                    <div class="participant-item">
+                        <div class="participant-icon"><i class="fas fa-user"></i></div>
+                        <div class="participant-info">
+                            <div class="participant-name">Загрузка...</div>
+                            <div class="participant-status"></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="chatMessages" class="hidden"></div>
+            </div>
+            <div class="chat-input-container hidden" id="chatInputContainer">
+                <input type="text" class="chat-input" id="chatInput" placeholder="Сообщение...">
+                <button class="chat-send" id="sendChatBtn"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
     </div>
-  </header>
-
-  <!-- CENTER: Main video stage (remote) + PIP local -->
-  <div class="video-stage">
-    <!-- Remote video element (DO NOT CHANGE ID) -->
-    <video id="remoteVideo" autoplay playsinline></video>
-
-    <!-- Local video overlay (glass PIP) -->
-    <div class="local-video-wrapper">
-      <video id="localVideo" autoplay playsinline muted></video>
-      <div class="pip-label">
-        <i class="fas fa-user-circle" style="margin-right: 5px;"></i> You
-      </div>
+    <div class="call-controls">
+        <div class="control-group">
+            <button class="ctrl-btn" id="muteBtn" title="Микрофон"><i class="fas fa-microphone"></i></button>
+            <button class="ctrl-btn" id="cameraBtn" title="Камера"><i class="fas fa-video"></i></button>
+        </div>
+        <div class="control-group">
+            <button class="ctrl-btn" id="screenShareBtn" title="Демонстрация"><i class="fas fa-desktop"></i></button>
+        </div>
+        <button class="ctrl-btn danger large" id="endCallBtn" title="Завершить"><i class="fas fa-phone-slash"></i></button>
+        <div class="control-group">
+            <button class="ctrl-btn" id="chatToggleBtn" title="Чат"><i class="fas fa-comment-dots"></i></button>
+        </div>
     </div>
-  </div>
-
-  <!-- BOTTOM: Premium control panel (icons only, gradient buttons) -->
-  <div class="controls-panel">
-    <!-- Mic toggle (mute/unmute) -->
-    <button id="micBtn" class="ctrl-btn" title="Toggle microphone">
-      <i class="fas fa-microphone"></i>
-    </button>
-
-    <!-- Start call (green gradient) -->
-    <button id="startCallBtn" class="ctrl-btn call-start" title="Start call">
-      <i class="fas fa-phone-alt"></i>
-    </button>
-
-    <!-- Camera toggle -->
-    <button id="cameraBtn" class="ctrl-btn" title="Toggle camera">
-      <i class="fas fa-video"></i>
-    </button>
-
-    <!-- End call (red gradient) -->
-    <button id="endCallBtn" class="ctrl-btn call-end" title="End call">
-      <i class="fas fa-phone-slash"></i>
-    </button>
-  </div>
 </div>
 
-<!-- ============================================= -->
-<!-- EXISTING WebRTC + Socket.io LOGIC (UNTOUCHED) -->
-<!-- ============================================= -->
-<script src="/socket.io/socket.io.js"></script>
 <script>
-  // CRITICAL: Keep all original WebRTC / socket.io logic exactly as before.
-  // Only minimal UI binding adaptations (like class toggles) are allowed.
-  // The following is a placeholder for your production WebRTC code.
-  // (In your environment, replace with actual working logic, but preserve structure.)
-  
-  (function(){
-    // ---------- DO NOT MODIFY SOCKET / PEER CONNECTION LOGIC ----------
-    const socket = io();
-    
-    // State (keep as is)
-    let localStream = null;
+    // Показ уведомления об ошибке API
+    function showAPIError(message) {
+        const existing = document.querySelector('.api-error-toast');
+        if (existing) existing.remove();
+        
+        const toast = document.createElement('div');
+        toast.className = 'api-error-toast';
+        toast.innerHTML = `
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>${message}</span>
+            <i class="fas fa-times close-toast" onclick="this.parentElement.remove()"></i>
+        `;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => toast.remove(), 5000);
+    }
+
+    let ws = null;
+    let currentUser = null;
+    let token = null;
+    let callData = null;
     let peerConnection = null;
-    let isMicEnabled = true;
-    let isCameraEnabled = true;
-    let isCallActive = false;
-    
-    const remoteVideo = document.getElementById('remoteVideo');
+    let localStream = null;
+    let callTimerInterval = null;
+    let callStartTime = 0;
+    let muted = false;
+    let videoOff = false;
+    let chatOpen = false;
+    let participants = new Map();
+    let chatOwner = null;
+
+    const callStatus = document.getElementById('callStatus');
+    const callTimer = document.getElementById('callTimer');
     const localVideo = document.getElementById('localVideo');
-    
-    const micBtn = document.getElementById('micBtn');
-    const cameraBtn = document.getElementById('cameraBtn');
-    const startCallBtn = document.getElementById('startCallBtn');
-    const endCallBtn = document.getElementById('endCallBtn');
-    
-    // Configuration (keep unchanged)
-    const configuration = {
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    const videoGrid = document.getElementById('videoGrid');
+    const participantsList = document.getElementById('participantsList');
+    const chatMessages = document.getElementById('chatMessages');
+    const chatInputContainer = document.getElementById('chatInputContainer');
+    const chatInput = document.getElementById('chatInput');
+
+    async function init() {
+        token = localStorage.getItem('token');
+        const data = localStorage.getItem('callData');
+        
+        if (!data) {
+            callData = { type: 'group', groupId: 'room-' + Date.now(), groupName: 'Комната', callType: 'video', isIncoming: false };
+        } else {
+            callData = JSON.parse(data);
+        }
+        
+        document.getElementById('callTitle').textContent = callData.groupName || callData.targetName || 'Комната';
+
+        // Пробуем загрузить профиль из API
+        try {
+            const resp = await fetch('/api/v1/auth/me', {
+                headers: { 'Authorization': `Bearer ${token || ''}` }
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                currentUser = data.user;
+            } else {
+                // Если API недоступен — используем данные из localStorage
+                const savedUser = localStorage.getItem('user');
+                if (savedUser) {
+                    currentUser = JSON.parse(savedUser);
+                } else {
+                    currentUser = { 
+                        id: 'user_' + Date.now(), 
+                        username: 'Участник', 
+                        firstName: 'Участник',
+                        lastName: ''
+                    };
+                }
+                showAPIError('Нет подключения к серверу. Работаем в офлайн-режиме.');
+            }
+        } catch (e) {
+            const savedUser = localStorage.getItem('user');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+            } else {
+                currentUser = { 
+                    id: 'user_' + Date.now(), 
+                    username: 'Участник', 
+                    firstName: 'Участник',
+                    lastName: ''
+                };
+            }
+            showAPIError('Сервер недоступен. Работаем в офлайн-режиме.');
+        }
+
+        // Загружаем участников
+        await loadParticipants();
+        
+        // Подключаем WebSocket
+        connectWebSocket();
+        
+        // Запрашиваем медиа
+        await requestMedia();
+    }
+
+    async function loadParticipants() {
+        try {
+            const chatId = callData.type === 'personal' ? callData.targetId : callData.groupId;
+            
+            // Пробуем загрузить из API
+            try {
+                if (callData.type === 'personal') {
+                    const resp = await fetch(`/api/v1/users/${callData.targetId}/profile`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        participants.set(data.user.id, {
+                            ...data.user,
+                            online: true,
+                            role: 'member'
+                        });
+                    }
+                } else if (chatId) {
+                    const resp = await fetch(`/api/v1/chats/${chatId}/members`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        data.members.forEach(m => {
+                            const userId = m.id || m.user_id;
+                            const role = m.role || 'member';
+                            participants.set(userId, {
+                                id: userId,
+                                username: m.username,
+                                firstName: m.first_name || m.firstName || m.username,
+                                lastName: m.last_name || m.lastName || '',
+                                avatarUrl: m.avatar_url || m.avatarUrl,
+                                online: m.is_online || m.isOnline || false,
+                                role: role
+                            });
+                            if (role === 'owner' || role === 'admin') {
+                                chatOwner = userId;
+                            }
+                        });
+                    }
+                }
+            } catch (e) {
+                showAPIError('Не удалось загрузить список участников.');
+            }
+            
+            // Добавляем текущего пользователя
+            participants.set(currentUser.id, {
+                ...currentUser,
+                online: true,
+                role: chatOwner === currentUser.id ? 'owner' : 'member'
+            });
+            
+            renderParticipants();
+            updateParticipantsCount();
+            
+        } catch (e) {
+            participants.set(currentUser.id, {
+                ...currentUser,
+                online: true,
+                role: 'member'
+            });
+            renderParticipants();
+        }
+    }
+
+    function renderParticipants() {
+        const html = Array.from(participants.values()).map(p => {
+            const isMe = p.id === currentUser?.id;
+            const isOwner = p.role === 'owner' || p.role === 'admin' || p.id === chatOwner;
+            const displayName = p.firstName || p.username || 'Участник';
+            const meLabel = isMe ? ' (Вы)' : '';
+            const ownerLabel = isOwner ? ' · Организатор' : '';
+            
+            return `
+                <div class="participant-item">
+                    <div class="participant-icon">
+                        ${p.avatarUrl ? `<img src="${p.avatarUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover">` : '<i class="fas fa-user"></i>'}
+                    </div>
+                    <div class="participant-info">
+                        <div class="participant-name">${displayName}${meLabel}</div>
+                        <div class="participant-status">${p.online ? '● Онлайн' : '○ Офлайн'}${ownerLabel}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        participantsList.innerHTML = html || '<div class="participant-item"><div class="participant-info">Нет участников</div></div>';
+    }
+
+    function updateParticipantsCount() {
+        const online = Array.from(participants.values()).filter(p => p.online).length;
+        const total = participants.size;
+        callStatus.textContent = `Участников: ${online} онлайн из ${total}`;
+    }
+
+    function connectWebSocket() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        ws = new WebSocket(`${protocol}//${window.location.host}/ws?userId=${currentUser.id}`);
+
+        ws.onopen = () => {
+            ws.send(JSON.stringify({
+                type: 'join_call',
+                chatId: callData.type === 'personal' ? callData.targetId : callData.groupId
+            }));
+        };
+
+        ws.onmessage = (e) => {
+            try {
+                const msg = JSON.parse(e.data);
+                handleWebSocketMessage(msg);
+            } catch (err) {}
+        };
+
+        ws.onclose = () => {
+            setTimeout(connectWebSocket, 3000);
+        };
+        
+        ws.onerror = () => {
+            showAPIError('Проблемы с подключением к серверу.');
+        };
+    }
+
+    function handleWebSocketMessage(msg) {
+        switch (msg.type) {
+            case 'user_status':
+                if (participants.has(msg.userId)) {
+                    const p = participants.get(msg.userId);
+                    p.online = msg.isOnline;
+                    participants.set(msg.userId, p);
+                    renderParticipants();
+                    updateParticipantsCount();
+                }
+                break;
+                
+            case 'user_joined':
+                if (msg.user && !participants.has(msg.user.id)) {
+                    participants.set(msg.user.id, {
+                        ...msg.user,
+                        online: true,
+                        role: msg.user.role || 'member'
+                    });
+                    renderParticipants();
+                    updateParticipantsCount();
+                }
+                break;
+                
+            case 'user_left':
+                if (participants.has(msg.userId)) {
+                    const p = participants.get(msg.userId);
+                    p.online = false;
+                    participants.set(msg.userId, p);
+                    renderParticipants();
+                    updateParticipantsCount();
+                }
+                break;
+                
+            case 'new_message':
+                if (msg.chatId === (callData.type === 'personal' ? callData.targetId : callData.groupId)) {
+                    const sender = msg.message.sender || {};
+                    const senderName = sender.firstName || sender.username || 'Участник';
+                    addChatMessage({ username: senderName, message: msg.message.content });
+                }
+                break;
+                
+            case 'call_signal':
+                handleCallSignal(msg);
+                break;
+        }
+    }
+
+    function handleCallSignal(msg) {
+        const { signal } = msg;
+        if (signal.type === 'offer') handleOffer(signal);
+        else if (signal.type === 'answer') handleAnswer(signal);
+        else if (signal.type === 'candidate') handleIceCandidate(signal);
+    }
+
+    async function requestMedia() {
+        callStatus.textContent = 'Запрос разрешений...';
+
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({
+                video: callData.callType === 'video',
+                audio: true
+            });
+            
+            localVideo.srcObject = localStream;
+            await localVideo.play().catch(e => {});
+
+            setupPeerConnection();
+            callStatus.textContent = 'На связи';
+            startTimer();
+
+        } catch (err) {
+            callStatus.textContent = 'Ошибка доступа к медиа';
+        }
+    }
+
+    function setupPeerConnection() {
+        const config = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        };
+        
+        peerConnection = new RTCPeerConnection(config);
+        
+        if (localStream) {
+            localStream.getTracks().forEach(track => {
+                peerConnection.addTrack(track, localStream);
+            });
+        }
+
+        peerConnection.onicecandidate = (e) => {
+            if (e.candidate && ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'call_signal',
+                    chatId: callData.type === 'personal' ? callData.targetId : callData.groupId,
+                    signal: { type: 'candidate', candidate: e.candidate }
+                }));
+            }
+        };
+
+        peerConnection.ontrack = (e) => {
+            if (e.streams[0]) {
+                addRemoteVideo(e.streams[0], 'Участник');
+            }
+        };
+
+        if (!callData.isIncoming) {
+            createOffer();
+        }
+    }
+
+    async function createOffer() {
+        try {
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+            
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'call_signal',
+                    chatId: callData.type === 'personal' ? callData.targetId : callData.groupId,
+                    signal: { type: 'offer', offer }
+                }));
+            }
+        } catch (e) {}
+    }
+
+    async function handleOffer(signal) {
+        try {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(signal.offer));
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'call_signal',
+                    chatId: callData.type === 'personal' ? callData.targetId : callData.groupId,
+                    signal: { type: 'answer', answer }
+                }));
+            }
+            startTimer();
+        } catch (e) {}
+    }
+
+    async function handleAnswer(signal) {
+        try {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(signal.answer));
+        } catch (e) {}
+    }
+
+    async function handleIceCandidate(signal) {
+        try {
+            if (signal.candidate) {
+                await peerConnection.addIceCandidate(new RTCIceCandidate(signal.candidate));
+            }
+        } catch (e) {}
+    }
+
+    function addRemoteVideo(stream, label) {
+        const existing = document.querySelector('[data-remote="true"]');
+        if (existing) {
+            existing.querySelector('video').srcObject = stream;
+            return;
+        }
+
+        const tile = document.createElement('div');
+        tile.className = 'video-tile';
+        tile.setAttribute('data-remote', 'true');
+        
+        const video = document.createElement('video');
+        video.autoplay = true;
+        video.playsinline = true;
+        video.srcObject = stream;
+        
+        const labelDiv = document.createElement('div');
+        labelDiv.className = 'video-label';
+        labelDiv.textContent = label;
+        
+        tile.appendChild(video);
+        tile.appendChild(labelDiv);
+        videoGrid.appendChild(tile);
+        
+        video.play().catch(e => {});
+    }
+
+    function addChatMessage(data) {
+        const msg = document.createElement('div');
+        msg.className = 'chat-message';
+        msg.innerHTML = `<span class="chat-author">${data.username}:</span> <span class="chat-text">${data.message}</span>`;
+        chatMessages.appendChild(msg);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function startTimer() {
+        if (callTimerInterval) clearInterval(callTimerInterval);
+        callStartTime = Date.now();
+        callTimerInterval = setInterval(() => {
+            const e = Math.floor((Date.now() - callStartTime) / 1000);
+            callTimer.textContent = `${Math.floor(e/60).toString().padStart(2,'0')}:${(e%60).toString().padStart(2,'0')}`;
+        }, 1000);
+    }
+
+    // Управление
+    document.getElementById('muteBtn').onclick = () => {
+        if (localStream) {
+            muted = !muted;
+            localStream.getAudioTracks().forEach(t => t.enabled = !muted);
+            const b = document.getElementById('muteBtn');
+            b.classList.toggle('active', muted);
+            b.innerHTML = muted ? '<i class="fas fa-microphone-slash"></i>' : '<i class="fas fa-microphone"></i>';
+        }
     };
-    
-    // ---- Helper to update button UI (does not break logic) ----
-    function updateMicUI() {
-      const icon = micBtn.querySelector('i');
-      if (isMicEnabled) {
-        micBtn.classList.remove('muted');
-        icon.className = 'fas fa-microphone';
-      } else {
-        micBtn.classList.add('muted');
-        icon.className = 'fas fa-microphone-slash';
-      }
-    }
-    
-    function updateCameraUI() {
-      const icon = cameraBtn.querySelector('i');
-      if (isCameraEnabled) {
-        cameraBtn.classList.remove('muted');
-        icon.className = 'fas fa-video';
-      } else {
-        cameraBtn.classList.add('muted');
-        icon.className = 'fas fa-video-slash';
-      }
-    }
-    
-    // Initialize media (DO NOT CHANGE LOGIC)
-    async function initLocalStream() {
-      try {
-        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        localVideo.srcObject = localStream;
-        isMicEnabled = true;
-        isCameraEnabled = true;
-        updateMicUI();
-        updateCameraUI();
-      } catch (err) {
-        console.error('Error accessing media devices:', err);
-      }
-    }
-    
-    // Create RTCPeerConnection (DO NOT CHANGE)
-    function createPeerConnection() {
-      peerConnection = new RTCPeerConnection(configuration);
-      
-      peerConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-          socket.emit('ice-candidate', event.candidate);
+
+    document.getElementById('cameraBtn').onclick = () => {
+        if (localStream) {
+            videoOff = !videoOff;
+            localStream.getVideoTracks().forEach(t => t.enabled = !videoOff);
+            const b = document.getElementById('cameraBtn');
+            b.classList.toggle('active', videoOff);
+            b.innerHTML = videoOff ? '<i class="fas fa-video-slash"></i>' : '<i class="fas fa-video"></i>';
         }
-      };
-      
-      peerConnection.ontrack = (event) => {
-        remoteVideo.srcObject = event.streams[0];
-      };
-      
-      // Add local tracks
-      if (localStream) {
-        localStream.getTracks().forEach(track => {
-          peerConnection.addTrack(track, localStream);
+    };
+
+    document.getElementById('screenShareBtn').onclick = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+            const vt = stream.getVideoTracks()[0];
+            
+            if (localStream) {
+                const ot = localStream.getVideoTracks()[0];
+                if (ot) { localStream.removeTrack(ot); ot.stop(); }
+                localStream.addTrack(vt);
+            }
+            
+            localVideo.srcObject = localStream;
+            
+            if (peerConnection) {
+                const sender = peerConnection.getSenders().find(s => s.track?.kind === 'video');
+                if (sender) sender.replaceTrack(vt);
+            }
+            
+            vt.onended = async () => {
+                const s = await navigator.mediaDevices.getUserMedia({ video: true });
+                const nt = s.getVideoTracks()[0];
+                if (localStream) {
+                    const ot = localStream.getVideoTracks()[0];
+                    if (ot) { localStream.removeTrack(ot); ot.stop(); }
+                    localStream.addTrack(nt);
+                }
+                localVideo.srcObject = localStream;
+                if (peerConnection) {
+                    const sender = peerConnection.getSenders().find(s => s.track?.kind === 'video');
+                    if (sender) sender.replaceTrack(nt);
+                }
+            };
+        } catch (e) {}
+    };
+
+    document.getElementById('endCallBtn').onclick = () => {
+        if (peerConnection) peerConnection.close();
+        if (localStream) localStream.getTracks().forEach(t => t.stop());
+        if (ws) {
+            ws.send(JSON.stringify({
+                type: 'leave_call',
+                chatId: callData.type === 'personal' ? callData.targetId : callData.groupId
+            }));
+            ws.close();
+        }
+        window.close();
+    };
+
+    document.getElementById('chatToggleBtn').onclick = () => {
+        chatOpen = !chatOpen;
+        chatMessages.classList.toggle('hidden', !chatOpen);
+        participantsList.classList.toggle('hidden', chatOpen);
+        chatInputContainer.classList.toggle('hidden', !chatOpen);
+        
+        document.querySelectorAll('.tab').forEach(t => {
+            t.classList.remove('active');
+            if ((chatOpen && t.dataset.tab === 'chat') || (!chatOpen && t.dataset.tab === 'participants')) {
+                t.classList.add('active');
+            }
         });
-      }
-    }
-    
-    // ---- Socket event handlers (DO NOT MODIFY) ----
-    socket.on('offer', async (offer) => {
-      if (!peerConnection) createPeerConnection();
-      await peerConnection.setRemoteDescription(offer);
-      const answer = await peerConnection.createAnswer();
-      await peerConnection.setLocalDescription(answer);
-      socket.emit('answer', answer);
+    };
+
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.onclick = () => {
+            chatOpen = tab.dataset.tab === 'chat';
+            chatMessages.classList.toggle('hidden', !chatOpen);
+            participantsList.classList.toggle('hidden', chatOpen);
+            chatInputContainer.classList.toggle('hidden', !chatOpen);
+            
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+        };
     });
-    
-    socket.on('answer', async (answer) => {
-      if (peerConnection) {
-        await peerConnection.setRemoteDescription(answer);
-      }
-    });
-    
-    socket.on('ice-candidate', async (candidate) => {
-      if (peerConnection) {
-        await peerConnection.addIceCandidate(candidate);
-      }
-    });
-    
-    // ---- Button actions (KEEP EXACT FUNCTIONALITY) ----
-    startCallBtn.addEventListener('click', async () => {
-      if (!localStream) await initLocalStream();
-      if (!peerConnection) createPeerConnection();
-      
-      const offer = await peerConnection.createOffer();
-      await peerConnection.setLocalDescription(offer);
-      socket.emit('offer', offer);
-      isCallActive = true;
-    });
-    
-    endCallBtn.addEventListener('click', () => {
-      if (peerConnection) {
-        peerConnection.close();
-        peerConnection = null;
-      }
-      if (remoteVideo.srcObject) {
-        remoteVideo.srcObject.getTracks().forEach(t => t.stop());
-        remoteVideo.srcObject = null;
-      }
-      isCallActive = false;
-    });
-    
-    micBtn.addEventListener('click', () => {
-      if (localStream) {
-        const audioTrack = localStream.getAudioTracks()[0];
-        if (audioTrack) {
-          audioTrack.enabled = !audioTrack.enabled;
-          isMicEnabled = audioTrack.enabled;
-          updateMicUI();
+
+    document.getElementById('sendChatBtn').onclick = () => {
+        const msg = chatInput.value.trim();
+        if (msg && ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({
+                type: 'chat_message',
+                chatId: callData.type === 'personal' ? callData.targetId : callData.groupId,
+                message: { content: msg }
+            }));
+            const senderName = currentUser?.firstName || currentUser?.username || 'Вы';
+            addChatMessage({ username: senderName, message: msg });
+            chatInput.value = '';
         }
-      }
-    });
-    
-    cameraBtn.addEventListener('click', () => {
-      if (localStream) {
-        const videoTrack = localStream.getVideoTracks()[0];
-        if (videoTrack) {
-          videoTrack.enabled = !videoTrack.enabled;
-          isCameraEnabled = videoTrack.enabled;
-          updateCameraUI();
+    };
+
+    chatInput.onkeypress = (e) => {
+        if (e.key === 'Enter') document.getElementById('sendChatBtn').click();
+    };
+
+    document.getElementById('fullscreenBtn').onclick = () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+        } else {
+            document.exitFullscreen();
         }
-      }
-    });
-    
-    // Auto init stream on page load (keep as is)
-    window.addEventListener('load', () => {
-      initLocalStream();
-    });
-    
-    // Keep reference to socket, etc.
-  })();
+    };
+
+    init();
 </script>
-<!-- Font Awesome already included, no further changes -->
 </body>
 </html>
